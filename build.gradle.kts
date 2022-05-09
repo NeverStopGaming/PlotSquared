@@ -46,6 +46,14 @@ allprojects {
             name = "EngineHub"
             url = uri("https://maven.enginehub.org/repo/")
         }
+
+        maven {
+            url = uri("https://repo.neverstopgaming.net/private/")
+            credentials {
+                this.username = System.getenv("repoName") ?: System.getenv("NEXUS_USER") ?: System.getProperty("publishName")
+                this.password = System.getenv("repoPassword") ?: System.getenv("NEXUS_PASSWORD") ?: System.getProperty("publishPassword")
+            }
+        }
     }
 }
 

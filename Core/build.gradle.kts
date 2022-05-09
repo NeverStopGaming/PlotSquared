@@ -14,7 +14,10 @@ dependencies {
     // Adventure
     api(libs.adventure)
     api(libs.minimessage)
-
+    api("net.neverstopgaming.backend:nsg-adapter:1.0.0-SNAPSHOT")
+    api("net.neverstopgaming.backend:nsg-api:1.0.0-SNAPSHOT")
+    api("net.neverstopgaming.backend:nsg-core:1.0.0-SNAPSHOT")
+    api("org.jetbrains.kotlin:kotlin-stdlib:1.6.21")
     // Guice
     api(libs.guice) {
         exclude(group = "com.google.guava")

@@ -63,11 +63,13 @@ import com.plotsquared.core.util.task.TaskManager;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.world.gamemode.GameMode;
 import com.sk89q.worldedit.world.item.ItemType;
+import kotlin.Pair;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.Template;
 import net.kyori.adventure.title.Title;
+import net.neverstopgaming.backend.util.Misc;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -90,6 +92,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * The abstract class supporting {@code BukkitPlayer} and {@code SpongePlayer}.
@@ -937,7 +940,17 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
                 .replace('\u2010', '%').replace('\u2020', '&').replace('\u2030', '&')
                 .replace("<prefix>", TranslatableCaption.of("core.prefix").getComponent(this));
         // Parse the message
-        final Component component = MiniMessage.get().parse(message, replacements);
+        final Component component = Misc.INSTANCE.parseMini(message, this.getUUID(), Arrays.stream(replacements).map(t -> {
+            if (t instanceof Template.ComponentTemplate) {
+                return new Pair<>(((Template.ComponentTemplate) t).key(), ((Template.ComponentTemplate) t).value());
+            } else if (t instanceof Template.StringTemplate) {
+                return new Pair<>(
+                        ((Template.StringTemplate) t).key(),
+                        Component.text(((Template.StringTemplate) t).value())
+                );
+            }
+            throw new NullPointerException();
+        }).toList().toArray(Pair[]::new));
         if (!Objects.equal(component, this.getMeta("lastMessage"))
                 || System.currentTimeMillis() - this.<Long>getMeta("lastMessageTime") > 5000) {
             setMeta("lastMessage", component);
