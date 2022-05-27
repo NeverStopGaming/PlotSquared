@@ -63,13 +63,14 @@ import com.plotsquared.core.util.task.TaskManager;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.world.gamemode.GameMode;
 import com.sk89q.worldedit.world.item.ItemType;
-import kotlin.Pair;
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.Template;
 import net.kyori.adventure.title.Title;
-import net.neverstopgaming.backend.util.Misc;
+import net.neverstopgaming.backend.InitializerObject;
+import net.neverstopgaming.backend.player.NSGPlayer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -92,7 +93,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * The abstract class supporting {@code BukkitPlayer} and {@code SpongePlayer}.
@@ -104,8 +104,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     private static final Logger LOGGER = LogManager.getLogger("PlotSquared/" + PlotPlayer.class.getSimpleName());
 
     // Used to track debug mode
-    private static final Set<PlotPlayer<?>> debugModeEnabled =
-            Collections.synchronizedSet(new HashSet<>());
+    private static final Set<PlotPlayer<?>> debugModeEnabled = Collections.synchronizedSet(new HashSet<>());
 
     @SuppressWarnings("rawtypes")
     private static final Map<Class<?>, PlotPlayerConverter> converters = new HashMap<>();
@@ -124,7 +123,8 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     private PermissionProfile permissionProfile;
 
     public PlotPlayer(
-            final @NonNull PlotAreaManager plotAreaManager, final @NonNull EventDispatcher eventDispatcher,
+            final @NonNull PlotAreaManager plotAreaManager,
+            final @NonNull EventDispatcher eventDispatcher,
             final @NonNull PermissionHandler permissionHandler
     ) {
         this.plotAreaManager = plotAreaManager;
@@ -158,16 +158,13 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
             }
             toVisit.addAll(Arrays.asList(current.getInterfaces())); // add interfaces
         }
-        throw new IllegalArgumentException(String
-                .format(
-                        "There is no registered PlotPlayer converter for type %s",
-                        object.getClass().getSimpleName()
-                ));
+        throw new IllegalArgumentException(String.format("There is no registered PlotPlayer converter for type %s",
+                object.getClass().getSimpleName()
+        ));
     }
 
     public static <T> void registerConverter(
-            final @NonNull Class<T> clazz,
-            final PlotPlayerConverter<T> converter
+            final @NonNull Class<T> clazz, final PlotPlayerConverter<T> converter
     ) {
         converters.put(clazz, converter);
     }
@@ -190,23 +187,19 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     }
 
     protected void setupPermissionProfile() {
-        this.permissionProfile = permissionHandler.getPermissionProfile(this).orElse(
-                NullPermissionProfile.INSTANCE);
+        this.permissionProfile = permissionHandler.getPermissionProfile(this).orElse(NullPermissionProfile.INSTANCE);
     }
 
     @Override
     public final boolean hasPermission(
-            final @Nullable String world,
-            final @NonNull String permission
+            final @Nullable String world, final @NonNull String permission
     ) {
         return this.permissionProfile.hasPermission(world, permission);
     }
 
     @Override
     public final boolean hasKeyedPermission(
-            final @Nullable String world,
-            final @NonNull String permission,
-            final @NonNull String key
+            final @Nullable String world, final @NonNull String permission, final @NonNull String key
     ) {
         return this.permissionProfile.hasKeyedPermission(world, permission, key);
     }
@@ -286,8 +279,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @return the plot the player is standing on or null if standing on a road or not in a {@link PlotArea}
      */
     public Plot getCurrentPlot() {
-        try (final MetaDataAccess<Plot> lastPlotAccess =
-                     this.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_LAST_PLOT)) {
+        try (final MetaDataAccess<Plot> lastPlotAccess = this.accessTemporaryMetaData(PlayerMetaDataKeys.TEMPORARY_LAST_PLOT)) {
             if (lastPlotAccess.get().orElse(null) == null && !Settings.Enabled_Components.EVENTS) {
                 return this.getLocation().getPlot();
             }
@@ -357,8 +349,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
         int count = 0;
         for (PlotArea area : this.plotAreaManager.getPlotAreasSet(world)) {
             if (!Settings.Done.COUNTS_TOWARDS_LIMIT) {
-                count +=
-                        area.getPlotsAbs(uuid).stream().filter(plot -> !DoneFlag.isDone(plot)).count();
+                count += area.getPlotsAbs(uuid).stream().filter(plot -> !DoneFlag.isDone(plot)).count();
             } else {
                 count += area.getPlotsAbs(uuid).size();
             }
@@ -603,8 +594,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      */
     public void unregister() {
         Plot plot = getCurrentPlot();
-        if (plot != null && Settings.Enabled_Components.PERSISTENT_META && plot
-                .getArea() instanceof SinglePlotArea) {
+        if (plot != null && Settings.Enabled_Components.PERSISTENT_META && plot.getArea() instanceof SinglePlotArea) {
             PlotId id = plot.getId();
             int x = id.getX();
             int z = id.getY();
@@ -644,9 +634,8 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @return number of clusters owned
      */
     public int getPlayerClusterCount(String world) {
-        return PlotSquared.get().getClusters(world).stream()
-                .filter(cluster -> getUUID().equals(cluster.owner)).mapToInt(PlotCluster::getArea)
-                .sum();
+        return PlotSquared.get().getClusters(world).stream().filter(cluster -> getUUID().equals(cluster.owner)).mapToInt(
+                PlotCluster::getArea).sum();
     }
 
     /**
@@ -721,24 +710,19 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
                             TaskManager.runTask(() -> {
                                 if (getMeta("teleportOnLogin", true)) {
                                     teleport(location, TeleportCause.LOGIN);
-                                    sendMessage(
-                                            TranslatableCaption.of("teleport.teleported_to_plot"));
+                                    sendMessage(TranslatableCaption.of("teleport.teleported_to_plot"));
                                 }
                             });
                         } else if (!PlotSquared.get().isMainThread(Thread.currentThread())) {
                             if (getMeta("teleportOnLogin", true)) {
-                                plot.teleportPlayer(
-                                        PlotPlayer.this,
-                                        result -> TaskManager.runTask(() -> {
-                                            if (getMeta("teleportOnLogin", true)) {
-                                                if (plot.isLoaded()) {
-                                                    teleport(location, TeleportCause.LOGIN);
-                                                    sendMessage(TranslatableCaption
-                                                            .of("teleport.teleported_to_plot"));
-                                                }
-                                            }
-                                        })
-                                );
+                                plot.teleportPlayer(PlotPlayer.this, result -> TaskManager.runTask(() -> {
+                                    if (getMeta("teleportOnLogin", true)) {
+                                        if (plot.isLoaded()) {
+                                            teleport(location, TeleportCause.LOGIN);
+                                            sendMessage(TranslatableCaption.of("teleport.teleported_to_plot"));
+                                        }
+                                    }
+                                }));
                             }
                         }
                     } catch (Throwable e) {
@@ -800,8 +784,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
     }
 
     <T> void setPersistentMeta(
-            final @NonNull MetaDataKey<T> key,
-            final @NonNull T value
+            final @NonNull MetaDataKey<T> key, final @NonNull T value
     ) {
         if (key.getType().getRawType().equals(Integer.class)) {
             this.setPersistentMeta(key.toString(), Ints.toByteArray((int) (Object) value));
@@ -846,8 +829,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @param replacements Variable replacements
      */
     public void sendTitle(
-            final @NonNull Caption title, final @NonNull Caption subtitle,
-            final @NonNull Template... replacements
+            final @NonNull Caption title, final @NonNull Caption subtitle, final @NonNull Template... replacements
     ) {
         sendTitle(
                 title,
@@ -870,20 +852,20 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @param replacements Variable replacements
      */
     public void sendTitle(
-            final @NonNull Caption title, final @NonNull Caption subtitle,
-            final int fadeIn, final int stay, final int fadeOut,
+            final @NonNull Caption title,
+            final @NonNull Caption subtitle,
+            final int fadeIn,
+            final int stay,
+            final int fadeOut,
             final @NonNull Template... replacements
     ) {
-        final Component titleComponent = MiniMessage.get().parse(title.getComponent(this), replacements);
-        final Component subtitleComponent =
-                MiniMessage.get().parse(subtitle.getComponent(this), replacements);
-        final Title.Times times = Title.Times.of(
-                Duration.of(Settings.Titles.TITLES_FADE_IN * 50L, ChronoUnit.MILLIS),
+        final Component titleComponent = parseCustom(title.getComponent(this), replacements);
+        final Component subtitleComponent = parseCustom(subtitle.getComponent(this), replacements);
+        final Title.Times times = Title.Times.of(Duration.of(Settings.Titles.TITLES_FADE_IN * 50L, ChronoUnit.MILLIS),
                 Duration.of(Settings.Titles.TITLES_STAY * 50L, ChronoUnit.MILLIS),
                 Duration.of(Settings.Titles.TITLES_FADE_OUT * 50L, ChronoUnit.MILLIS)
         );
-        getAudience().showTitle(Title
-                .title(titleComponent, subtitleComponent, times));
+        getAudience().showTitle(Title.title(titleComponent, subtitleComponent, times));
     }
 
     /**
@@ -893,8 +875,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
      * @param replacements Variable replacements
      */
     public void sendActionBar(
-            final @NonNull Caption caption,
-            final @NonNull Template... replacements
+            final @NonNull Caption caption, final @NonNull Template... replacements
     ) {
         String message;
         try {
@@ -909,8 +890,11 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
             return;
         }
         // Replace placeholders, etc
-        message = CaptionUtility.format(this, message)
-                .replace('\u2010', '%').replace('\u2020', '&').replace('\u2030', '&')
+        message = CaptionUtility
+                .format(this, message)
+                .replace('\u2010', '%')
+                .replace('\u2020', '&')
+                .replace('\u2030', '&')
                 .replace("<prefix>", TranslatableCaption.of("core.prefix").getComponent(this));
 
 
@@ -920,8 +904,7 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
 
     @Override
     public void sendMessage(
-            final @NonNull Caption caption,
-            final @NonNull Template... replacements
+            final @NonNull Caption caption, final @NonNull Template... replacements
     ) {
         String message;
         try {
@@ -936,23 +919,23 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
             return;
         }
         // Replace placeholders, etc
-        message = CaptionUtility.format(this, message)
-                .replace('\u2010', '%').replace('\u2020', '&').replace('\u2030', '&')
+        message = CaptionUtility
+                .format(this, message)
+                .replace('\u2010', '%')
+                .replace('\u2020', '&')
+                .replace('\u2030', '&')
                 .replace("<prefix>", TranslatableCaption.of("core.prefix").getComponent(this));
         // Parse the message
-        final Component component = Misc.INSTANCE.parseMini(message, this.getUUID(), Arrays.stream(replacements).map(t -> {
-            if (t instanceof Template.ComponentTemplate) {
-                return new Pair<>(((Template.ComponentTemplate) t).key(), ((Template.ComponentTemplate) t).value());
-            } else if (t instanceof Template.StringTemplate) {
-                return new Pair<>(
-                        ((Template.StringTemplate) t).key(),
-                        Component.text(((Template.StringTemplate) t).value())
-                );
-            }
-            throw new NullPointerException();
-        }).toList().toArray(Pair[]::new));
-        if (!Objects.equal(component, this.getMeta("lastMessage"))
-                || System.currentTimeMillis() - this.<Long>getMeta("lastMessageTime") > 5000) {
+        final Component component;
+        try {
+            component = parseCustom(message, replacements);
+        } catch (Throwable t) {
+            System.out.println("Failed to parse message: " + message);
+            t.printStackTrace();
+            return;
+        }
+        if (!Objects.equal(component, this.getMeta("lastMessage")) || System.currentTimeMillis() - this.<Long>getMeta(
+                "lastMessageTime") > 5000) {
             setMeta("lastMessage", component);
             setMeta("lastMessageTime", System.currentTimeMillis());
             getAudience().sendMessage(component);
@@ -1041,6 +1024,13 @@ public abstract class PlotPlayer<P> implements CommandCaller, OfflinePlotPlayer,
 
         PlotPlayer<?> convert(BaseObject object);
 
+    }
+
+    private @NonNull Component parseCustom(String message, Template... replacements) {
+        final NSGPlayer player = InitializerObject.initializer.getPlayerPool().getPlayer(getUUID());
+        return MiniMessage.get().parse(message
+                .replace("<pcolor>", "<" + player.getPrimaryColor() + ">")
+                .replace("<scolor>", "<" + player.getSecondaryColor() + ">"), replacements);
     }
 
 }
