@@ -209,6 +209,11 @@ allprojects {
             this.archiveClassifier.set(null as String?)
             this.archiveFileName.set("${project.name}-${project.version}.${this.archiveExtension.getOrElse("jar")}")
             this.destinationDirectory.set(rootProject.tasks.shadowJar.get().destinationDirectory.get())
+            from(project.configurations.runtimeClasspath.get().filter {
+                !it.endsWith(".pom")
+            }.map {
+                if (it.isDirectory) it else zipTree(it)
+            })
         }
 
         named("build") {

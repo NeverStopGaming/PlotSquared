@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    api(projects.plotSquaredCore)
+    api(project(":PlotSquared-Core"))
 
     // Metrics
     implementation(libs.bstats)
